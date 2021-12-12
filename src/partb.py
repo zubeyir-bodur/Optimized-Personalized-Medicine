@@ -2,7 +2,7 @@
 IE 400 Project - Part B
 """
 import gurobipy as gp
-from gurobipy import GRB
+from gurobipy import *
 import pandas as pd
 
 
@@ -51,13 +51,13 @@ for i in range(1, 8):
     # Add each indexed decision variable one by one
     a.append(model.addVar(vtype=GRB.BINARY, name="a" + str(i)))
     r.append(model.addVar(vtype=GRB.BINARY, name="r" + str(i)))
-    m.append(model.addVar(vtype=GRB.BINARY, name="m" + str(i)))
+    m.append(model.addVar(vtype=GRB.INTEGER, name="m" + str(i)))
     c.append(model.addVar(vtype=GRB.INTEGER, name="c" + str(i)))
     x.append(model.addVar(vtype=GRB.INTEGER, name="x" + str(i)))
     y.append(model.addVar(vtype=GRB.BINARY, name="y" + str(i)))
 
 # Set the objective
-#model.setObjective()
+model.setObjective(quicksum(fb_i[i-1]*(a[i-1] + r[i-1]) + ub_i[i-1]*c[i-1] for i in range(1, 8)), GRB.MINIMIZE)
 
 # Add the quality of life constraint
 c1 = model.addConstr(q(p, y, x) >= Q_36)
@@ -76,24 +76,19 @@ for i in range(1, 8):
         c4 = model.addConstr(a[i-1] == 0)
     if i == 2 or i == 5 or i == 6:
         c5 = model.addConstr(r[i-1] == 0)
-    # TODO: change the decision variable m to
-    #  binary, then update the model accordingly
-    diff = m[i-1] * c[i-1]
-    #print(type(diff))
-    #set_to = (xb_i[i-1]*y[i-1] + diff * y[i-1])
-    #c6 = model.addConstr(x[i-1] == set_to)
+    c6 = model.addConstr(x[i-1] == xb_i[i-1]*y[i-1] + m[i-1] * c[i-1])
     c7 = model.addConstr(x[i-1] >= min_i[i-1])
     c8 = model.addConstr(x[i-1] <= max_i[i-1])
-    # Try to imitate a ternary variable for m
+    # Try to imitate a signed binary variable for m
     c12 = model.addConstr(m[i-1] >= -1)
     c13 = model.addConstr(m[i-1] <= 1)
     c14 = model.addConstr(c[i-1] >= 0)
     c15 = model.addConstr(x[i-1] >= 0)
 
 # Solve the model
-#model.optimize()
+model.optimize()
 #model.printAttr('X')  # This prints the non-zero solutions found
-
-
+model.printAttr('x')
+#print(q(p, y, x))
 
 
