@@ -3,9 +3,10 @@ IE 400 Project - Part B
 """
 import gurobipy as gp
 from gurobipy import GRB
+import pandas as pd
 
 # Read patient data from .xlsx file
-
+patient_data = pd.read_excel('patient_data.xlsx', sheet_name="Sheet1")
 # Declare constants
 
 # Solve the minimization problem for each patient
