@@ -6,6 +6,9 @@ __pycache__/
 # C extensions
 *.so
 
+# all .lp files
+*.lp
+
 # Distribution / packaging
 .Python
 build/

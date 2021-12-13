@@ -1,9 +1,19 @@
+
 """
 IE 400 Project - Part B
 """
 import gurobipy as gp
 from gurobipy import *
 import pandas as pd
+
+
+def checkQ(p_in, my_model):
+    y_ = []
+    x_ = []
+    for i in range(0, 7):
+        x_.append(int(round(my_model.getVarByName("x" + str(i + 1)).getAttr('X'))))
+        y_.append(int(round(my_model.getVarByName("y" + str(i + 1)).getAttr('X'))))
+    return q(p_in, y_, x_)
 
 
 def q(p_in, y_in, x_in):
@@ -35,6 +45,7 @@ xb_i = [20, 0, 30, 15, 0, 0, 35]
 
 # Cost of deviating from the base regimen
 fb_i = [25, 50, 10, 25, 20, 30, 40]
+#fb_i = [0, 0, 0, 0, 0, 0, 0]
 ub_i = [1, 2, 1, 3, 2, 1, 1]
 
 # Create a Model instance
@@ -43,74 +54,79 @@ model = gp.Model()
 # Decision variables - from i = 1 to 7 inclusive
 a = []
 r = []
-m = []
 c = []
 x = []
 y = []
+inc = []
+dec = []
 M = 2
 z = []
-w = []
-g = []
-for i in range(0, 7):
+for i in range(1, 8):
     # Add each indexed decision variable one by one
-    a.append(model.addVar(vtype=GRB.BINARY, name="a" + str(i+1)))
-    r.append(model.addVar(vtype=GRB.BINARY, name="r" + str(i+1)))
-    m.append(model.addVar(vtype=GRB.SEMIINT, lb=-1, ub=1, name="m" + str(i+1)))
-    c.append(model.addVar(vtype=GRB.SEMIINT, lb=0, name="c" + str(i+1)))
-    x.append(model.addVar(vtype=GRB.SEMIINT, lb=0, name="x" + str(i+1)))
-    y.append(model.addVar(vtype=GRB.BINARY, name="y" + str(i+1)))
-    z.append(model.addVar(vtype=GRB.BINARY, name="z" + str(i+1)))
-    w.append(model.addVar(vtype=GRB.BINARY, name="w" + str(i+1)))
-    g.append(model.addVar(vtype=GRB.BINARY, name="g" + str(i+1)))
+    a.append(model.addVar(vtype=GRB.BINARY, name="a" + str(i)))
+    r.append(model.addVar(vtype=GRB.BINARY, name="r" + str(i)))
+    inc.append(model.addVar(vtype=GRB.BINARY, name="inc" + str(i)))
+    dec.append(model.addVar(vtype=GRB.BINARY, name="dec" + str(i)))
+    c.append(model.addVar(vtype=GRB.INTEGER, lb=0, name="c" + str(i)))
+    x.append(model.addVar(vtype=GRB.INTEGER, lb=0, name="x" + str(i)))
+    y.append(model.addVar(vtype=GRB.BINARY, name="y" + str(i)))
+    z.append(model.addVar(vtype=GRB.BINARY, name="z" + str(i)))
 
 # Set the objective
-model.setObjective(quicksum(fb_i[i]*(a[i] + r[i]) + ub_i[i]*c[i] for i in range(0, 7)), GRB.MINIMIZE)
+model.setObjective(quicksum(fb_i[i-1]*(a[i-1] + r[i-1]) + ub_i[i-1]*c[i-1] for i in range(1, 8)), GRB.MINIMIZE)
 
 # Add the quality of life constraint
-model.addConstr(q(p, y, x) >= Q_36, name="q_of_life")
+model.addConstr(q(p, y, x) >= Q_36, name="quality_of_life")
 
 # Add the remaining constraints
-for i in range(0, 7):
-    model.addConstr(y[i] - yb_i[i], GRB.LESS_EQUAL, M * w[i], name ="if_drug_" + str(i) + "_is_added")
-    model.addConstr(1 - a[i], GRB.LESS_EQUAL, M * (1 - w[i]), name="then_a_" + str(i) + "is_1")
-    model.addConstr(r[i], GRB.LESS_EQUAL, M * (1 - w[i]), name="then_r_" + str(i) + "is_0")
-
-    model.addConstr(yb_i[i] - y[i], GRB.LESS_EQUAL, M * g[i], name="if_drug_" + str(i) + "_is_removed")
-    model.addConstr(1 - r[i], GRB.LESS_EQUAL, M * (1 - g[i]), name="then_r_" + str(i) + "is_1")
-    model.addConstr(a[i], GRB.LESS_EQUAL, M * (1 - g[i]), name="then_a_" + str(i) + "is_0")
-    """
-    if i == 2 or i == 5 or i == 6:
-        model.addConstr(y[i]], GRB.EQUAL, a[i]], name="addition" + str(i+1))
-        model.addConstr(r[i]], GRB.EQUAL, 0, name="removal_no" + str(i+1))
-    if i == 1 or i == 3 or i == 4 or i == 7:
-        model.addConstr(y[i]], GRB.EQUAL, 1 - r[i]], name="removal" + str(i+1))
-        model.addConstr(a[i]], GRB.EQUAL, 0, name="addition_no" + str(i+1))
-    """
-    model.addConstr(x[i], GRB.EQUAL, xb_i[i]*y[i] + m[i] * c[i], name="set_x" + str(i+1))
-    model.addConstr(x[i], GRB.GREATER_EQUAL, min_i[i] * y[i], name="min_x" + str(i+1))
-    model.addConstr(x[i], GRB.LESS_EQUAL,  max_i[i], name="max_X" + str(i+1))
-    """
-        If y[i] == 0 then
-            m[i] == 0
-    """
-    model.addConstr(1 - y[i], GRB.LESS_EQUAL,M * z[i], name="if y" + str(i+1) + " is zero")
-    model.addConstr(m[i], GRB.LESS_EQUAL,M * (1 - z[i]), name="then m" + str(i+1) + " must be zero")
-    model.update()
-# Solve the model
-model.setParam("NonConvex", 2)
-model.optimize()
-model.update()
 for i in range(1, 8):
-    print("x" + str(i) + " = " + str(model.getVarByName("x" + str(i)).getAttr('X')) )
-    print("y" + str(i) + " = " + str(model.getVarByName("y" + str(i)).getAttr('X')) + "\n")
+    if i == 2 or i == 5 or i == 6:
+        model.addConstr(y[i-1] == a[i-1], name="added_drug_" + str(i))
+        model.addConstr(r[i-1] == 0, name="already_removed_drug " + str(i))
+    if i == 1 or i == 3 or i == 4 or i == 7:
+        model.addConstr(y[i-1] == 1 - r[i-1], name="removed_drug " + str(i))
+        model.addConstr(a[i-1] == 0, name="already_added_drug " + str(i))
 
-def checkQ(p_in, my_model):
-    y_ = []
-    x_ = []
-    for i in range(0, 7):
-        x_.append(my_model.getVarByName("x" + str(i + 1)).getAttr('X'))
-        y_.append(my_model.getVarByName("y" + str(i + 1)).getAttr('X'))
-    return q(p_in, y_, x_)
+    """
+    inc[i] NAND dec[i] = 1 for all i
+    model.addConstr(inc[i-1] + dec[i-1] <= 2, name="if_nand_dec_" + str(i))
+    """
 
+    """
+        inc[i] NAND dec[i] = 1 for all i
+    model.addConstr(r[i - 1] + a[i - 1] <= 2, name="a_nand_r_" + str(i))
+    """
 
-print("Quality Of Life = " + str(checkQ(p, model)) )
+    """
+    If y[i] == 0 then
+        inc[i] == 0
+        a[i] == 0
+    model.addConstr(1 - y[i-1] <= M*z[i-1], name="if_y" + str(i) + "_is_zero")
+    model.addConstr(inc[i-1] <= M * (1 - z[i - 1]), name="then_inc" + str(i) + "_must_be_zero")
+    model.addConstr(a[i-1] <= M * (1 - z[i - 1]), name="then_a" + str(i) + "_must_be_zero")
+    """
+
+    """
+    x[i] = base_regimen + change, if included, otherwise zero
+    x will be zero if y = 0 as well, compatible with other constraints
+    """
+    model.addConstr(x[i-1] == (xb_i[i-1]*y[i-1] + (inc[i-1] - dec[i-1])*c[i-1]), name="set_x" + str(i))
+
+    """
+    Dosage bounds, if y = 0 the interval is [0, 0] = 0
+    """
+    model.addConstr(x[i-1] >= min_i[i-1] * y[i-1], name="min_x" + str(i))
+    model.addConstr(x[i-1] <= max_i[i-1] * y[i-1], name="max_x" + str(i))
+    model.update()
+
+# Solve the model
+model.write("partb.lp")
+model.optimize()
+model.printAttr('X')
+model.update()
+print("Decision Variables: ")
+for i in range(1, 8):
+    print("x" + str(i) + " = " + str(int(round(model.getVarByName("x" + str(i)).getAttr('X')))))
+    print("y" + str(i) + " = " + str(int(round(model.getVarByName("y" + str(i)).getAttr('X')))) + "\n")
+print("Quality Of Life = " + str(checkQ(p, model)))
+print("Deviation Cost, a.k.a. objective  = " + str(int(round(model.getObjective().getValue()))))
