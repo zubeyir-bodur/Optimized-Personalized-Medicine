@@ -67,22 +67,22 @@ for i in range(1, 8):
     y.append(model.addVar(vtype=GRB.BINARY, name="y" + str(i)))
 
 # Set the objective
-model.setObjective(quicksum(fb_i[i-1]*a[i-1] + ub_i[i-1]*c[i-1] for i in range(1, 8)), GRB.MINIMIZE)
+model.setObjective(quicksum(fb_i[i]*a[i] + ub_i[i]*c[i] for i in range(0, 7)), GRB.MINIMIZE)
 
 # Add the quality of life constraint
 model.addConstr(q(p, y, x) >= Q_36, name="quality_of_life")
 
 # Add the remaining constraints
-for i in range(1, 8):
-    if yb_i[i-1] == 0:
-        model.addConstr(a[i-1] == y[i-1], name="added_drug_" + str(i))
-    if yb_i[i-1] == 1:
-        model.addConstr(a[i-1] == 1 - y[i-1], name="removed_drug_" + str(i))
+for i in range(0, 7):
+    if yb_i[i] == 0:
+        model.addConstr(a[i] == y[i], name="added_drug_" + str(i+1))
+    if yb_i[i] == 1:
+        model.addConstr(a[i] == 1 - y[i], name="removed_drug_" + str(i+1))
 
     """
         inc[i] NAND dec[i] = 1
     """
-    model.addConstr(inc[i-1] + dec[i-1] <= 1, name="if_nand_dec_" + str(i))
+    model.addConstr(inc[i] + dec[i] <= 1, name="if_nand_dec_" + str(i+1))
 
     """
     x[i] = base_regimen + change
@@ -104,13 +104,13 @@ for i in range(1, 8):
         if xb_i != 0, then
             (inc[i], dec[i]) = (0, 0), (0, 1) or (1, 0)
     """
-    model.addConstr(x[i-1] - xb_i[i-1] == (inc[i-1] - dec[i-1])*c[i-1], name="set_x" + str(i))
+    model.addConstr(x[i] - xb_i[i] == (inc[i] - dec[i])*c[i], name="set_x" + str(i+1))
 
     """
     Dosage bounds, if y = 0 the interval is [0, 0] = 0
     """
-    model.addConstr(x[i-1] >= min_i[i-1] * y[i-1], name="min_x" + str(i))
-    model.addConstr(x[i-1] <= max_i[i-1] * y[i-1], name="max_x" + str(i))
+    model.addConstr(x[i] >= min_i[i] * y[i], name="min_x" + str(i+1))
+    model.addConstr(x[i] <= max_i[i] * y[i], name="max_x" + str(i+1))
     model.update()
 
 # Solve the model
