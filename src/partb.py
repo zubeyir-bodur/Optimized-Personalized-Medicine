@@ -45,7 +45,6 @@ xb_i = [20, 0, 30, 15, 0, 0, 35]
 
 # Cost of deviating from the base regimen
 fb_i = [25, 50, 10, 25, 20, 30, 40]
-#fb_i = [0, 0, 0, 0, 0, 0, 0]
 ub_i = [1, 2, 1, 3, 2, 1, 1]
 
 # Create a Model instance
@@ -53,64 +52,59 @@ model = gp.Model()
 
 # Decision variables - from i = 1 to 7 inclusive
 a = []
-r = []
 c = []
 x = []
 y = []
 inc = []
 dec = []
-M = 2
-z = []
 for i in range(1, 8):
     # Add each indexed decision variable one by one
     a.append(model.addVar(vtype=GRB.BINARY, name="a" + str(i)))
-    r.append(model.addVar(vtype=GRB.BINARY, name="r" + str(i)))
     inc.append(model.addVar(vtype=GRB.BINARY, name="inc" + str(i)))
     dec.append(model.addVar(vtype=GRB.BINARY, name="dec" + str(i)))
     c.append(model.addVar(vtype=GRB.INTEGER, lb=0, name="c" + str(i)))
     x.append(model.addVar(vtype=GRB.INTEGER, lb=0, name="x" + str(i)))
     y.append(model.addVar(vtype=GRB.BINARY, name="y" + str(i)))
-    z.append(model.addVar(vtype=GRB.BINARY, name="z" + str(i)))
 
 # Set the objective
-model.setObjective(quicksum(fb_i[i-1]*(a[i-1] + r[i-1]) + ub_i[i-1]*c[i-1] for i in range(1, 8)), GRB.MINIMIZE)
+model.setObjective(quicksum(fb_i[i-1]*a[i-1] + ub_i[i-1]*c[i-1] for i in range(1, 8)), GRB.MINIMIZE)
 
 # Add the quality of life constraint
 model.addConstr(q(p, y, x) >= Q_36, name="quality_of_life")
 
 # Add the remaining constraints
 for i in range(1, 8):
-    if i == 2 or i == 5 or i == 6:
-        model.addConstr(y[i-1] == a[i-1], name="added_drug_" + str(i))
-        model.addConstr(r[i-1] == 0, name="already_removed_drug " + str(i))
-    if i == 1 or i == 3 or i == 4 or i == 7:
-        model.addConstr(y[i-1] == 1 - r[i-1], name="removed_drug " + str(i))
-        model.addConstr(a[i-1] == 0, name="already_added_drug " + str(i))
+    if yb_i[i-1] == 0:
+        model.addConstr(a[i-1] == y[i-1], name="added_drug_" + str(i))
+    if yb_i[i-1] == 1:
+        model.addConstr(a[i-1] == 1 - y[i-1], name="removed_drug_" + str(i))
 
     """
-    inc[i] NAND dec[i] = 1 for all i
-    model.addConstr(inc[i-1] + dec[i-1] <= 2, name="if_nand_dec_" + str(i))
+        inc[i] NAND dec[i] = 1
     """
+    model.addConstr(inc[i-1] + dec[i-1] <= 1, name="if_nand_dec_" + str(i))
 
     """
-        inc[i] NAND dec[i] = 1 for all i
-    model.addConstr(r[i - 1] + a[i - 1] <= 2, name="a_nand_r_" + str(i))
+    x[i] = base_regimen + change
+    
+    if y[i] = 0, then
+        x[i] = 0 (next constraint)
+        inc[i] = 0
+        c[i] = xb_i[i]
+        if xb_i != 0, then 
+            dec[i] = 1
+        if xb_i = 0, then 
+            dec[i] = 0
+    
+    if y[i] = 1, then
+        min[i]           <= x[i]                     <= max[i] (next constraint)
+        min[i] - xb_i[i] <= c[i] * (inc[i] - dec[i]) <= max[i] - xb_i[i]
+        if xb_i = 0, then 
+            (inc[i], dec[i]) = (1, 0)
+        if xb_i != 0, then
+            (inc[i], dec[i]) = (0, 0), (0, 1) or (1, 0)
     """
-
-    """
-    If y[i] == 0 then
-        inc[i] == 0
-        a[i] == 0
-    model.addConstr(1 - y[i-1] <= M*z[i-1], name="if_y" + str(i) + "_is_zero")
-    model.addConstr(inc[i-1] <= M * (1 - z[i - 1]), name="then_inc" + str(i) + "_must_be_zero")
-    model.addConstr(a[i-1] <= M * (1 - z[i - 1]), name="then_a" + str(i) + "_must_be_zero")
-    """
-
-    """
-    x[i] = base_regimen + change, if included, otherwise zero
-    x will be zero if y = 0 as well, compatible with other constraints
-    """
-    model.addConstr(x[i-1] == (xb_i[i-1]*y[i-1] + (inc[i-1] - dec[i-1])*c[i-1]), name="set_x" + str(i))
+    model.addConstr(x[i-1] - xb_i[i-1] == (inc[i-1] - dec[i-1])*c[i-1], name="set_x" + str(i))
 
     """
     Dosage bounds, if y = 0 the interval is [0, 0] = 0
