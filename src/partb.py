@@ -35,6 +35,10 @@ p = list(patient_36[1:10])
 # Q threshold
 Q_36 = patient_36[10]
 
+
+print("Group Number: " + str(patient_36[0]))
+print("Patient vector: " + str(p))
+print("Q threshold: " + str(Q_36))
 # Maximum/Minimum allowed dosages
 min_i = [20, 10, 20, 10, 10, 20, 20]
 max_i = [80, 50, 100, 100, 70, 90, 50]
