@@ -11,8 +11,8 @@ def checkQ(p_in, my_model):
     y_ = []
     x_ = []
     for i in range(0, 7):
-        x_.append(int(round(my_model.getVarByName("x" + str(i + 1)).getAttr('X'))))
-        y_.append(int(round(my_model.getVarByName("y" + str(i + 1)).getAttr('X'))))
+        x_.append((my_model.getVarByName("x" + str(i + 1)).getAttr('X')))
+        y_.append((my_model.getVarByName("y" + str(i + 1)).getAttr('X')))
     return q(p_in, y_, x_)
 
 
@@ -33,7 +33,7 @@ patient_36 = patient_data.iloc[36, :]
 p = list(patient_36[1:10])
 
 # Q threshold
-Q_36 = patient_36[10]
+Q_36 = float(patient_36[10])
 
 
 print("Group Number: " + str(patient_36[0]))
@@ -66,15 +66,15 @@ for i in range(1, 8):
     a.append(model.addVar(vtype=GRB.BINARY, name="a" + str(i)))
     inc.append(model.addVar(vtype=GRB.BINARY, name="inc" + str(i)))
     dec.append(model.addVar(vtype=GRB.BINARY, name="dec" + str(i)))
-    c.append(model.addVar(vtype=GRB.INTEGER, lb=0, name="c" + str(i)))
-    x.append(model.addVar(vtype=GRB.INTEGER, lb=0, name="x" + str(i)))
+    c.append(model.addVar(vtype=GRB.CONTINUOUS, lb=0, name="c" + str(i)))
+    x.append(model.addVar(vtype=GRB.CONTINUOUS, lb=0, name="x" + str(i)))
     y.append(model.addVar(vtype=GRB.BINARY, name="y" + str(i)))
 
 # Set the objective
 model.setObjective(quicksum(fb_i[i]*a[i] + ub_i[i]*c[i] for i in range(0, 7)), GRB.MINIMIZE)
 
 # Add the quality of life constraint
-model.addConstr(q(p, y, x) >= Q_36, name="quality_of_life")
+model.addConstr(q(p, y, x), GRB.GREATER_EQUAL, Q_36, name="quality_of_life")
 
 # Add the remaining constraints
 for i in range(0, 7):
@@ -122,9 +122,10 @@ model.write("partb.lp")
 model.optimize()
 model.printAttr('X')
 model.update()
-print("Decision Variables: ")
+print("Decision Variables, x and y: ")
 for i in range(1, 8):
-    print("x" + str(i) + " = " + str(int(round(model.getVarByName("x" + str(i)).getAttr('X')))))
-    print("y" + str(i) + " = " + str(int(round(model.getVarByName("y" + str(i)).getAttr('X')))) + "\n")
+    print("x" + str(i) + " = " + str(model.getVarByName("x" + str(i)).getAttr('X')))
+    print("y" + str(i) + " = " + str(model.getVarByName("y" + str(i)).getAttr('X')) + "\n")
 print("Quality Of Life = " + str(checkQ(p, model)))
-print("Deviation Cost, a.k.a. objective  = " + str(int(round(model.getObjective().getValue()))))
+print("Deviation Cost, a.k.a. objective  = " + str(model.getObjective().getValue()))
+
