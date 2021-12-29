@@ -70,8 +70,11 @@ for i in range(0, 7):
     """
     Dosage bounds, if y = 0 the interval is [0, 0] = 0
     """
-    model.addConstr(x[i] >= min_i[i] * y[i], name="min_x" + str(i + 1))
-    model.addConstr(x[i] <= max_i[i] * y[i], name="max_x" + str(i + 1))
+    if i == 0 or i == 2 or i== 3 or i ==6:
+        model.addConstr(x[i] >= min_i[i], name="min" + str(i+1))
+        model.addConstr(x[i] <= max_i[i], name="max" + str(i + 1))
+    else :
+        model.addConstr(x[i], GRB.EQUAL, 0, name="set" +str(i+1))
     model.update()
 
 # Solve the model
@@ -83,5 +86,4 @@ print("Decision Variables, x and y: ")
 for i in range(1, 8):
     print("x" + str(i) + " = " + str(model.getVarByName("x" + str(i)).getAttr('X')))
     print("y" + str(i) + " = " + str(model.getVarByName("y" + str(i)).getAttr('X')) + "\n")
-print("Quality Of Life = " + str(checkQ(p, model)))
-print("Deviation Cost, a.k.a. objective  = " + str(model.getObjective().getValue()))
+print("Quality of Life, a.k.a. objective  = " + str(model.getObjective().getValue()))
