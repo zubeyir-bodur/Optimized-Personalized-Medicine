@@ -1,5 +1,5 @@
 """
-IE 400 Project - Part B
+IE 400 Project - Part C
 """
 import gurobipy as gp
 from gurobipy import *
@@ -16,9 +16,9 @@ def checkQ(p_in, my_model):
 
 
 def q(p_in, y_in, x_in):
-    p_sum = -5*p_in[0] - 0.5*p_in[1] - 12*p_in[2] - 8*p_in[3] - 5*p_in[4] - 5*p_in[5] - p_in[6] - 3*p_in[7] - 2*p_in[8]
-    y_sum = -5*y_in[0] - 6*y_in[1] - 4*y_in[2] - 4*y_in[3] - 8*y_in[4] - 6*y_in[5] - 7*y_in[6]
-    x_sum = 0.28*x_in[0] + 0.3*x_in[1] + 0.25*x_in[2] + 0.17*x_in[3] + 0.31*x_in[4] + 0.246*x_in[5] + 0.4*x_in[6]
+    p_sum = -5 * p_in[0] - 0.5 * p_in[1] - 12 * p_in[2] - 8 * p_in[3] - 5 * p_in[4] - 5 * p_in[5] - p_in[6] - 3 * p_in[7] - 2 * p_in[8]
+    y_sum = -5 * y_in[0] - 6 * y_in[1] - 4 * y_in[2] - 4 * y_in[3] - 8 * y_in[4] - 6 * y_in[5] - 7 * y_in[6]
+    x_sum = 0.28 * x_in[0] + 0.3 * x_in[1] + 0.25 * x_in[2] + 0.17 * x_in[3] + 0.31 * x_in[4] + 0.246 * x_in[5] + 0.4 * x_in[6]
     return p_sum + y_sum + x_sum
 
 
@@ -33,7 +33,6 @@ p = list(patient_36[1:10])
 
 # Q threshold
 Q_36 = float(patient_36[10])
-
 
 print("Group Number: " + str(patient_36[0]))
 print("Patient vector: " + str(p))
@@ -60,6 +59,7 @@ x = []
 y = []
 inc = []
 dec = []
+M = 1000
 for i in range(1, 8):
     # Add each indexed decision variable one by one
     a.append(model.addVar(vtype=GRB.BINARY, name="a" + str(i)))
@@ -69,8 +69,10 @@ for i in range(1, 8):
     x.append(model.addVar(vtype=GRB.CONTINUOUS, lb=0, name="x" + str(i)))
     y.append(model.addVar(vtype=GRB.BINARY, name="y" + str(i)))
 
+w = model.addVar(vtype=GRB.BINARY, name="w")
+
 # Set the objective
-model.setObjective(quicksum(fb_i[i]*a[i] + ub_i[i]*c[i] for i in range(0, 7)), GRB.MINIMIZE)
+model.setObjective(quicksum(fb_i[i] * a[i] + ub_i[i] * c[i] for i in range(0, 7)), GRB.MINIMIZE)
 
 # Add the quality of life constraint
 model.addConstr(q(p, y, x), GRB.GREATER_EQUAL, Q_36, name="quality_of_life")
@@ -78,18 +80,18 @@ model.addConstr(q(p, y, x), GRB.GREATER_EQUAL, Q_36, name="quality_of_life")
 # Add the remaining constraints
 for i in range(0, 7):
     if yb_i[i] == 0:
-        model.addConstr(a[i] == y[i], name="added_drug_" + str(i+1))
+        model.addConstr(a[i] == y[i], name="added_drug_" + str(i + 1))
     if yb_i[i] == 1:
-        model.addConstr(a[i] == 1 - y[i], name="removed_drug_" + str(i+1))
+        model.addConstr(a[i] == 1 - y[i], name="removed_drug_" + str(i + 1))
 
     """
         inc[i] NAND dec[i] = 1
     """
-    model.addConstr(inc[i] + dec[i] <= 1, name="if_nand_dec_" + str(i+1))
+    model.addConstr(inc[i] + dec[i] <= 1, name="if_nand_dec_" + str(i + 1))
 
     """
     x[i] = base_regimen + change
-    
+
     if y[i] = 0, then
         x[i] = 0 (next constraint)
         inc[i] = 0
@@ -98,7 +100,7 @@ for i in range(0, 7):
             dec[i] = 1
         if xb_i = 0, then 
             dec[i] = 0
-    
+
     if y[i] = 1, then
         min[i]           <= x[i]                     <= max[i] (next constraint)
         min[i] - xb_i[i] <= c[i] * (inc[i] - dec[i]) <= max[i] - xb_i[i]
@@ -107,17 +109,22 @@ for i in range(0, 7):
         if xb_i != 0, then
             (inc[i], dec[i]) = (0, 0), (0, 1) or (1, 0)
     """
-    model.addConstr(x[i] - xb_i[i] == (inc[i] - dec[i])*c[i], name="set_x" + str(i+1))
-
+    model.addConstr(x[i] - xb_i[i] == (inc[i] - dec[i]) * c[i], name="set_x" + str(i + 1))
     """
     Dosage bounds, if y = 0 the interval is [0, 0] = 0
     """
-    model.addConstr(x[i] >= min_i[i] * y[i], name="min_x" + str(i+1))
-    model.addConstr(x[i] <= max_i[i] * y[i], name="max_x" + str(i+1))
+    model.addConstr(x[i] >= min_i[i] * y[i], name="min_x" + str(i + 1))
+    model.addConstr(x[i] <= max_i[i] * y[i], name="max_x" + str(i + 1))
     model.update()
 
+model.addConstr(x[0] + x[1] >= 50*y[0]*y[1], name="gt_50")
+model.addConstr(x[0] + x[1] <= 70*y[0]*y[1] + M*(1-y[0]*y[1]), name="lt_70")
+model.addConstr((1 - y[4])*x[2] <= 25, name="lt_25")
+model.addConstr(w, GRB.EQUAL, y[3]*y[5], name="cnt_3_1")
+model.addConstr(w * (y[4] + y[6] - 1) >= 0, name="cnt_3_2")
+
 # Solve the model
-model.write("partb.lp")
+model.write("partc.lp")
 model.optimize()
 model.printAttr('X')
 model.update()
@@ -127,4 +134,3 @@ for i in range(1, 8):
     print("y" + str(i) + " = " + str(model.getVarByName("y" + str(i)).getAttr('X')) + "\n")
 print("Quality Of Life = " + str(checkQ(p, model)))
 print("Deviation Cost, a.k.a. objective  = " + str(model.getObjective().getValue()))
-
