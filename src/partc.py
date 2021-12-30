@@ -117,6 +117,7 @@ for i in range(0, 7):
     model.addConstr(x[i] <= max_i[i] * y[i], name="max_x" + str(i + 1))
     model.update()
 
+model.addConstr(quicksum(x[i] for i in range(0, 7)), GRB.EQUAL, 201.6, name="check100")
 model.addConstr(x[0] + x[1] >= 50*y[0]*y[1], name="gt_50")
 model.addConstr(x[0] + x[1] <= 70*y[0]*y[1] + M*(1-y[0]*y[1]), name="lt_70")
 model.addConstr((1 - y[4])*x[2] <= 25, name="lt_25")

@@ -115,7 +115,7 @@ for i in range(0, 7):
     model.addConstr(x[i] >= min_i[i] * y[i], name="min_x" + str(i+1))
     model.addConstr(x[i] <= max_i[i] * y[i], name="max_x" + str(i+1))
     model.update()
-
+model.addConstr(quicksum(x[i] for i in range(0, 7)), GRB.EQUAL, 201.6, name="check100")
 # Solve the model
 model.write("partb.lp")
 model.optimize()

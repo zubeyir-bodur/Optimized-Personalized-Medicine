@@ -52,6 +52,8 @@ for i in range(1, 8):
 # Set the objective
 model.setObjective(q(p, yb_i, x), GRB.MAXIMIZE)
 
+# Add the quality of life constraint
+model.addConstr(q(p, yb_i, x), GRB.GREATER_EQUAL, Q_36, name="quality_of_life")
 
 # Add the remaining constraints
 for i in range(0, 7):
@@ -59,13 +61,14 @@ for i in range(0, 7):
     """
     Dosage bounds, if y = 0 the interval is [0, 0] = 0
     """
-    if i == 0 or i == 2 or i== 3 or i ==6:
+    if i == 0 or i == 2 or i == 3 or i == 6:
         model.addConstr(x[i] >= min_i[i], name="min" + str(i+1))
         model.addConstr(x[i] <= max_i[i], name="max" + str(i + 1))
-    else :
-        model.addConstr(x[i], GRB.EQUAL, 0, name="set" +str(i+1))
+    else:
+        model.addConstr(x[i], GRB.EQUAL, 0, name="set" + str(i+1))
     model.update()
 
+model.addConstr(quicksum(x[i] for i in range(0, 7)), GRB.EQUAL, 201.6, name="check100")
 # Solve the model
 model.write("parta.lp")
 model.optimize()
