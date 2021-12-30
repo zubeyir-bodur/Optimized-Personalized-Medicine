@@ -6,15 +6,6 @@ from gurobipy import *
 import pandas as pd
 
 
-def checkQ(p_in, my_model):
-    y_ = []
-    x_ = []
-    for i in range(0, 7):
-        x_.append((my_model.getVarByName("x" + str(i + 1)).getAttr('X')))
-        y_.append((my_model.getVarByName("y" + str(i + 1)).getAttr('X')))
-    return q(p_in, y_, x_)
-
-
 def q(p_in, y_in, x_in):
     p_sum = -5 * p_in[0] - 0.5 * p_in[1] - 12 * p_in[2] - 8 * p_in[3] - 5 * p_in[4] - 5 * p_in[5] - p_in[6] - 3 * p_in[7] - 2 * p_in[8]
     y_sum = -5 * y_in[0] - 6 * y_in[1] - 4 * y_in[2] - 4 * y_in[3] - 8 * y_in[4] - 6 * y_in[5] - 7 * y_in[6]
@@ -54,14 +45,12 @@ model = gp.Model()
 
 # Decision variables - from i = 1 to 7 inclusive
 x = []
-y = []
 for i in range(1, 8):
     # Add each indexed decision variable one by one
     x.append(model.addVar(vtype=GRB.CONTINUOUS, lb=0, name="x" + str(i)))
-    y.append(model.addVar(vtype=GRB.BINARY, name="y" + str(i)))
 
 # Set the objective
-model.setObjective(q(p, y, x), GRB.MAXIMIZE)
+model.setObjective(q(p, yb_i, x), GRB.MAXIMIZE)
 
 
 # Add the remaining constraints
@@ -85,5 +74,5 @@ model.update()
 print("Decision Variables, x and y: ")
 for i in range(1, 8):
     print("x" + str(i) + " = " + str(model.getVarByName("x" + str(i)).getAttr('X')))
-    print("y" + str(i) + " = " + str(model.getVarByName("y" + str(i)).getAttr('X')) + "\n")
+    print("y" + str(i) + " = " + str(yb_i[i-1]) + "\n")
 print("Quality of Life, a.k.a. objective  = " + str(model.getObjective().getValue()))
